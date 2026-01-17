@@ -17,9 +17,8 @@ ENV/
 ai_training_data/
 *.csv
 
-# Model files (can be regenerated)
-ai_models/
-*.pkl
+# Keep AI models in git (small files, useful for deployment)
+# ai_models/ - NOT ignored, models are tracked
 
 # Logs
 *.log
