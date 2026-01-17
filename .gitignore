@@ -1,0 +1,42 @@
+# Environment and secrets
+.env
+*.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+.venv/
+
+# Data files (too large for git)
+ai_training_data/
+*.csv
+
+# Model files (can be regenerated)
+ai_models/
+*.pkl
+
+# Logs
+*.log
+simulation_log_*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Results (can be regenerated)
+*_results.json
+# Simulation log
+.envalpaca
+.claude/
