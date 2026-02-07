@@ -36,6 +36,10 @@ Thumbs.db
 
 # Results (can be regenerated)
 *_results.json
-# Simulation log
+# Simulation logs and bot state files
+simulation_log.json
+simulation_5min_log.json
+sim_*_state.json
+*_output.log
 .envalpaca
 .claude/
