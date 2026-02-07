@@ -83,6 +83,7 @@ UPDATE_INTERVAL = 60  # Check every minute
 
 # Log file
 LOG_FILE = 'simulation_log.json'
+STATE_FILE = 'sim_4hr_state.json'
 
 print(f"Starting Balance: ${STARTING_BALANCE:,.2f}")
 print(f"Max Positions: {MAX_CONCURRENT_POSITIONS}")
@@ -131,6 +132,69 @@ def log_event(event_type, data):
         json.dump(logs, f, indent=2, default=str)
 
     return log_entry
+
+
+def write_state():
+    """Write current state for dashboard consumption."""
+    wins = len([t for t in closed_trades if t['pnl'] > 0])
+    losses = len([t for t in closed_trades if t['pnl'] <= 0])
+    total = wins + losses
+    state = {
+        'bot_name': '4-Hour Breakout Zone Retest',
+        'strategy': '4hr_zone_retest',
+        'status': 'running',
+        'last_update': datetime.now().isoformat(),
+        'balance': account_balance,
+        'starting_balance': STARTING_BALANCE,
+        'peak_balance': peak_balance,
+        'total_pnl': stats['total_pnl'],
+        'roi_pct': (stats['total_pnl'] / STARTING_BALANCE) * 100,
+        'open_positions': [],
+        'closed_trades': [],
+        'stats': {
+            'zones_established': stats['zones_established'],
+            'f_signals': stats['F_signals'],
+            'd_signals': stats['D_signals'],
+            'long_trades': stats['long_trades'],
+            'short_trades': stats['short_trades'],
+            'total_trades': total,
+            'wins': wins,
+            'losses': losses,
+            'win_rate': (wins / total * 100) if total > 0 else 0,
+        },
+        'active_zones': {}
+    }
+    for pair, pos in open_positions.items():
+        state['open_positions'].append({
+            'pair': pair,
+            'type': pos['type'],
+            'entry_price': pos['entry_price'],
+            'stop_loss': pos['S'],
+            'take_profit': pos['T'],
+            'quantity': pos['quantity'],
+            'entry_time': pos['entry_time'].isoformat() if isinstance(pos['entry_time'], datetime) else str(pos['entry_time'])
+        })
+    for trade in closed_trades[-20:]:
+        state['closed_trades'].append({
+            'pair': trade['pair'],
+            'type': trade['type'],
+            'entry_price': trade['entry_price'],
+            'exit_price': trade['exit_price'],
+            'pnl': trade['pnl'],
+            'exit_reason': trade['exit_reason'],
+            'entry_time': trade['entry_time'].isoformat() if isinstance(trade['entry_time'], datetime) else str(trade['entry_time']),
+            'exit_time': trade['exit_time'].isoformat() if isinstance(trade['exit_time'], datetime) else str(trade['exit_time'])
+        })
+    for pair, ps in pair_states.items():
+        state['active_zones'][pair] = {
+            'A': ps['A'],
+            'B': ps['B'],
+            'state': ps['state'],
+            'established_at': ps['established_at'].isoformat() if isinstance(ps['established_at'], datetime) else str(ps['established_at'])
+        }
+    with open(STATE_FILE, 'w') as f:
+        json.dump(state, f, indent=2, default=str)
+
 
 # ============================================
 # KRAKEN API SETUP
@@ -520,6 +584,9 @@ def main():
 
                 time.sleep(0.3)  # Rate limiting
 
+            # Write state for dashboard
+            write_state()
+
             # Print status every 5 iterations
             if iteration % 5 == 0:
                 print_status()
@@ -545,6 +612,15 @@ def main():
         if closed_trades:
             wins = len([t for t in closed_trades if t['pnl'] > 0])
             print(f"Win Rate:     {wins/len(closed_trades)*100:.1f}%")
+
+        try:
+            with open(STATE_FILE, 'r') as f:
+                final_state = json.load(f)
+            final_state['status'] = 'stopped'
+            with open(STATE_FILE, 'w') as f:
+                json.dump(final_state, f, indent=2, default=str)
+        except Exception:
+            pass
 
         log_event('BOT_STOPPED', {
             'final_balance': account_balance,
